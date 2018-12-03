@@ -3,8 +3,11 @@ from datetime import datetime
 import argparse
 import music21 as m
 m.environment.set('midiPath', '/usr/bin/timidity')
-m.environment.set('musicxmlPath', '/usr/bin/nted')
+m.environment.set('musicxmlPath','/usr/bin/musescore')
+#m.environment.set('musicxmlPath', '/usr/bin/nted')
 # m.environment.set('midiPath', '/usr/bin/cvlc')
+
+warning_count=0
 
 parser = argparse.ArgumentParser(description='Convert musicfiles to FisherPrice Musicbox records.')
 # parser.add_argument('musicfile', type=argparse.FileType('r'), default=sys.stdin, help="input file (midi, ABC, MusicXML, etc.)")
@@ -52,10 +55,12 @@ writeText("%s", y=-10, size=4);
 print(musicstream)
 
 def writenote(notes, offset,file):
+    count = 0
     for anote in notes:
         if anote not in legalnotelist:
                 print("Note %s is disregarded later." % anote)
                 print("WARNING! This is not going to sound nice")
+                count = count + 1
         else:
             newnote = m.note.Note()
             newnote.nameWithOctave = anote
@@ -64,6 +69,7 @@ def writenote(notes, offset,file):
 
     line=("[%s, %s]," % (notes, offset)).replace('\'','\"')
     print(line, file=file)
+    return count
 
 
 with open(filename[0]+'.scad', 'wt') as f:
@@ -72,14 +78,16 @@ with open(filename[0]+'.scad', 'wt') as f:
     for m21object in musicstream:
         print(m21object)
         if type(m21object) == m.note.Note:
-            writenote([m21object.nameWithOctave], m21object.offset, f)
+            warning_count = warning_count + writenote([m21object.nameWithOctave], m21object.offset, f)
         elif type(m21object) == m.chord.Chord:
             notesinchord=[]
             for anote in m21object:
                 notesinchord.append(anote.nameWithOctave)
-            writenote(notesinchord, m21object.offset, f)
+            warning_count = warning_count + writenote(notesinchord, m21object.offset, f)
     print('];', file=f)
     print(footer, file=f)
 
 if args.midi:
     outputmusic.write('midi', filename[0]+"_out.mid")
+
+print ("Warnings: \n", warning_count)
