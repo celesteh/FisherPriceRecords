@@ -43,8 +43,7 @@ FisherPriceRecords {
 		source = src;
 		str="";
 		this.pr_de_dup();
-		this.findTransposition.postln;
-		//this.realise;
+		this.findTransposition;
 
 	}
 
@@ -88,13 +87,8 @@ FisherPriceRecords {
 
 		length.isNil.if({ repeats = 1; length = 0;});
 
-		//noteEvents = midiEvents.select({|evt|
-		//	(evt[2] == \noteOn)
-		//});
 
 		repeats.do({|i|
-			//noteEvents.do({|n|
-			//	(n[5]!= 0).if({ // velocity is not 0
 			midiEvents.do({|n|
 					note = allNotes[this.map(n[4])].next;
 					time = n[1] + (i * length);
@@ -102,36 +96,8 @@ FisherPriceRecords {
 					noteStr = "[[\"%\"], %],\n".format(note, time);
 					str = str ++ noteStr;
 				});
-			//})
 		});
 	}
-
-	/*
-	map {|note|
-
-	var degree, output, i;
-
-	degree = note - lowestNote + transposition;
-
-	degree.postln;
-
-	i = 1;
-
-	output = allowedNotes[degree];
-	{ output.isNil && (i < 5)}.while ({
-	output = allowedNotes[degree + (12 * i)];
-	output.isNil.if({
-	output = allowedNotes[degree -(12 * i)];
-	output.isNil.if({
-	i = i + 1;
-	})})});
-
-	output.isNil.if({ "this shouldn't happen".warn; });
-
-	^output
-
-	}
-	*/
 
 	map{ |note|
 
@@ -149,39 +115,6 @@ FisherPriceRecords {
 		^ note + transposition
 	}
 
-	/*
-	p {|def|
-	var onsets, dict, evt, notes, events;
-
-	events = midiEvents.select({|evt|
-	(evt[2] == \noteOn) && (evt[5] != 0 )
-	}).sort({|a, b| a[1] < b[1] });
-
-	dict = Dictionary.new;
-
-	events.do({|e|
-	evt = dict.at(e[1]);
-	evt.isNil.if({ evt = [] });
-	//e[4].postln;
-	evt = evt ++ this.map(e[4]);
-	dict.put(e[1], evt);
-	});
-
-	onsets = dict.keys.asArray.sort;
-	notes = onsets.collect({|o| dict.at(o); });
-	onsets = onsets.differentiate;
-
-	def.isNil.if({ def = \fisherprice });
-	def = def.asSymbol;
-
-	^Pdef(def,
-	Pbind(
-	\dur, Pseq(onsets, inf),
-	\midinote, Pseq(notes, inf) + 12
-	)
-	);
-	}
-	*/
 	p {|def, length = 0|
 
 		var events, notes, startTime, item, onsets;
@@ -189,14 +122,10 @@ FisherPriceRecords {
 		def.isNil.if({ def = \fisherprice });
 		def = def.asSymbol;
 
-		//events = midiEvents.select({|evt|
-		//	(evt[2] == \noteOn) && (evt[5] != 0 )
-		//}).sort({|a, b| a[1] < b[1] });
 
 		notes = Dictionary.new;
 		onsets = [];
 
-		//events.do({|evt|
 		midiEvents.do({|evt|
 			startTime = evt[1].asFloat;
 			item = notes.at(startTime);
@@ -234,7 +163,7 @@ FisherPriceRecords {
 
 						onsets.do({|onset, index|
 							note = notes[onset.asFloat];
-							note.postln;
+							//note.postln;
 							(index < size).if({
 								dur = onsets[index + 1] - onset;
 							}, {
@@ -252,153 +181,19 @@ FisherPriceRecords {
 
 
 
-	crushRange {|degs|
+	crushRange {|octaves|
+		// -1 = raise lowest octave
+		// -2 raise lowest two octaves
+		// 1 lower highest octave
+		// 2 lower highest two octaves
+		// f.crushRange(2) gives the same result as
+		//f.crushRange(1).crushRange(1)
+
+		// to do
 
 	}
 
 
-	/*
-	findTransposition {
-	var notes, note, found, degs, allowed_degrees, find_outside, match, min, lowest,
-	outside, headroom, tries, top;
-
-	notes = [];
-	found = [];
-	allowed_degrees = allowedNotes - allowedNotes[0];
-
-	midiEvents.do({|evt|
-	(evt[2] == \noteOn).if ({
-	note = evt[4];
-	notes.includes(note).not.if({
-	notes = notes ++ note;
-	})
-	})
-	});
-	notes = notes.sort;
-
-	lowestNote = notes[0];
-	degs = notes-lowestNote;
-	degrees = degs;
-
-	find_outside = { |degs|
-
-	var notfound, index, flag;
-
-	notfound = [];
-	index = 0;
-	flag = false;
-
-	"in find_outside".postln;
-
-	degs.do({|d, i|
-	flag = false;
-	"in loop".postln;
-	{ flag.not && (index < allowed_degrees.size) }. while({
-	"checking".postln;
-	(d == allowed_degrees[index]).if({
-	// found!
-	flag = true;
-	}, { (d > allowed_degrees[index]).if({
-	// advance the index
-	index = index + 1;
-	}, { (d < allowed_degrees[index]).if({
-	//check octave transposition
-	allowed_degrees.indexOf(d+12).notNil.if({
-	flag = true; // off by an octave, but ok
-	}, { allowed_degrees.indexOf(d-12).notNil.if({
-	flag = true; // off by an octave, but ok
-	}, {
-	// not found
-	notfound = notfound ++ i;
-	d.postln;
-	(index > 0).if( { index = index - 1}); // back up
-	flag = true;
-	})})})})})
-	})
-	});
-
-	notfound.postln;
-	notfound = notfound.collect({|i| notes[i] });
-	notfound.postln;
-	notfound;
-	};
-
-	found = [];
-	match = false;
-	degs = notes-notes[0];
-	degs.postln;
-
-	top = allowed_degrees.last;
-
-	tries = 0;
-
-	{(tries < 2) && match.not}.while({
-
-	headroom = top - degs.last;
-
-	{headroom < 0 }.while({
-	"range too wide".warn;
-	// lower the top octave(s)+ fifth
-	degs = degs.collect({|d|
-	(d > (top - 7)).if({
-	d - 12;
-	}, {
-	d
-	});
-	});
-
-	degs = degs.sort;
-	headroom = allowed_degrees.last - degs.last;
-	});
-
-	{match.not && (degs.last <= allowed_degrees.last)}.while({
-
-	found = found.add(find_outside.(degrees));
-	found.last.postln;
-	(found.last.size == 0).if ({
-	match = true;
-	} , {
-	degs = degs + 1;
-	});
-	});
-
-	tries = tries +1;
-	top = top -12; // squish by another octave
-	});
-
-
-	match.if({
-	"Transposition found!".postln;
-	transposition = (found.size -1) + allowedNotes[0]; // this is wrong
-	transposition = (found.size -1);// + lowestNote;
-	degrees = degs;
-	degrees.postln;
-	allowed_degrees.postln;
-	transposition.postln;
-	}, {
-	min = inf;
-
-	found.do({|arr, index|
-	//min = arr.size.min(min);
-	(min > arr.size).if({
-	transposition = index;// + allowedNotes[0];
-	outside = arr;
-	min = arr.size;
-	degrees = degrees + transposition;
-	})
-	});
-
-	outside = outside.collect({|note|
-	//	note = note + notes[0] - transposition;
-	allNotes[note]
-	});
-
-	"Best match has low note % and has % outside notes:\n %".format(allNotes[notes[0]],min, outside).warn;
-	found.do({|arr| arr.postln;});
-	});
-
-	}
-	*/
 
 	findTransposition {
 		var notes, note, range, tryTransposition, errors, trans, found, min, best;
@@ -442,7 +237,7 @@ FisherPriceRecords {
 				(err.size == 0).if({
 					"success %".format(tnsp).postln;
 				}, {
-					"transposition % failed".format(tnsp).postln;
+					//"transposition % failed".format(tnsp).postln;
 				});
 
 				err;
