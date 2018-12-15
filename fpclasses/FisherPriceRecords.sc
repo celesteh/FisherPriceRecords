@@ -90,12 +90,12 @@ FisherPriceRecords {
 
 		repeats.do({|i|
 			midiEvents.do({|n|
-					note = allNotes[this.map(n[4])].next;
-					time = n[1] + (i * length);
+				note = allNotes[this.map(n[4])].next;
+				time = n[1] + (i * length);
 
-					noteStr = "[[\"%\"], %],\n".format(note, time);
-					str = str ++ noteStr;
-				});
+				noteStr = "[[\"%\"], %],\n".format(note, time);
+				str = str ++ noteStr;
+			});
 		});
 	}
 
@@ -109,7 +109,7 @@ FisherPriceRecords {
 
 		allowedNotes.indexOf(mapped).isNil.if({
 			"note % is not in the key!!".format(allNotes[note].next).warn;
-			note = Rest();
+			note = \rest; //Rest();
 		});
 
 		^ note + transposition
@@ -196,10 +196,11 @@ FisherPriceRecords {
 
 
 	findTransposition {
-		var notes, note, range, tryTransposition, errors, trans, found, min, best;
+		var notes, note, range, tryTransposition, errors, trans, found, min, best, outside;
 
 		notes = [];
 		errors = [];
+		transposition = 0;
 
 		midiEvents.do({|evt|
 			(evt[2] == \noteOn).if ({
@@ -219,9 +220,10 @@ FisherPriceRecords {
 
 			tryTransposition = {|tnsp|
 
-				var index, err;
+				var index, err, err_count;
 
 				err = [];
+				err_count = 0;
 
 				//notes.postln;
 
@@ -230,6 +232,7 @@ FisherPriceRecords {
 					index = allowedNotes.indexOf(note + tnsp);
 					index.isNil.if({
 						err = err ++ note;
+						err_count = err_count+1;
 
 					});
 				});
@@ -240,48 +243,60 @@ FisherPriceRecords {
 					//"transposition % failed".format(tnsp).postln;
 				});
 
-				err;
+				[tnsp, err_count, err];
 			};
 
 			allowedNotes.reverse.do({|allowed|
 
 				trans = allowed - notes.last;
-				errors = errors ++ tryTransposition.value(trans);
+				errors = errors.add(tryTransposition.value(trans));
+				//trans.postln;
+				//errors.postln;
 			});
 
 			found = false;
+			min = inf;
 
 			errors.do({|item, index|
 
+
 				found.not.if({
-					(item.size == 0).if({
+					(item[1] == 0).if({
 						found = true;
-						transposition = // count allowedNotes from end
-						allowedNotes.reverse[index] - notes.last;
+						transposition = item.first;
+						// count allowedNotes from end
+						//allowedNotes.reverse[index] - notes.last;
+						"success %".format(transposition).postln;
+					}, {
+						(item[1] < min).if({
+							min = item[1];
+							best = [index];
+							"min is %".format(min).postln;
+						}, { (item[1] == min).if({
+							best = best ++ index;
+						})
+						})
 					})
-				})
-			});
-
-
-
-		});
-
-		found.not.if({
-			"no transposition found".warn;
-			(errors.size > 0).if({
-				min = inf;
-				best = 0;
-				errors.do({|item, index|
-					(item.size < min).if({
-						min = item.size;
-						best = index;
-					});
 				});
-				"best has outside notes: %".format(errors[best]);
 			});
 
-			transposition = 0;
-		});
+			found.not.if({
+				"no transposition found".warn;
+
+				(min < inf).if({
+					outside = [];
+					best.do({|b|
+						outside = outside.add(
+							errors[b].last.collect({|n|
+								allNotes[n].next;
+						}));
+					});
+					"best has outside notes: %".format(outside).postln;
+				})
+
+
+			});
+		})
 
 		^transposition
 
@@ -337,7 +352,8 @@ composition = [
 		include = PathName(FisherPriceRecords.filenameSymbol.asString).pathOnly;
 		include = include.asString ++ "fpRecordModule.scad";
 		include.postln;
-		File.copy(include, path.pathOnly);
+		path.pathOnly.asString.postln;
+		File.copy(include, path.pathOnly.asString);
 	}
 
 	asString{
