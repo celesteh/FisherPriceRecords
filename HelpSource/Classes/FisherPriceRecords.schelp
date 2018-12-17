@@ -1,0 +1,110 @@
+TITLE:: FisherPriceRecords
+summary:: Convert a MIDI file to a record compatible with vintage (1970's) Fisher Price music box record players
+categories:: External Control>MIDI
+related:: Classes/SimpleMIDIFile
+
+DESCRIPTION::
+Convert a MIDI file to a record compatible with vintage (1970's) Fisher Price music box record players
+If the MIDI file is not in a key supported by the record player, this will search for a working transposition.
+Forked from Tycho's code at https://www.youmagine.com/designs/fisher-price-record
+Requires:
+    OpenSCAD http://www.openscad.org/
+	wslib Quark
+
+
+CLASSMETHODS::
+
+METHOD:: openMIDI
+Open a MIDI file to convert to a record
+
+ARGUMENT:: file
+Full path to the Midi File
+
+ARGUMENT:: title
+The name of the piece
+
+
+METHOD:: new
+Create a record from a list of onset times and midi note values
+
+ARGUMENT:: events
+An array of note onset events [[time, note], [time, note]...]
+ARGUMENT:: title
+The name of the piece
+
+ARGUMENT:: source
+If this si from another file, the path to that file
+
+
+INSTANCEMETHODS::
+
+METHOD:: p
+Create a pattern to audition the transposed piece
+
+ARGUMENT:: def
+A symbol used for a Pdef
+
+ARGUMENT:: length
+The duration of each loop
+
+returns:: A Pdef containing note values and start times
+
+METHOD:: crushRange
+Not yet implemented
+		If the input events ahve too wide a range or a transposition can't be found, it might be helpful to reduce the number of octaves in the piece.
+ARGUMENT:: octaves
+-1 = raise lowest octave
+-2 raise lowest two octaves
+1 lower highest octave
+2 lower highest two octaves
+f.crushRange(2) gives the same result as f.crushRange(1).crushRange(1)
+
+
+METHOD:: write
+Write an OPenSCAD file of the FisherPrice Disk
+ARGUMENT:: filename
+Patn of where to write.
+
+		Your file will not render unless there is a copy of fpRecordModule.scad in it's directory.
+
+
+METHOD:: realise
+Generate the FisherPrice disk information
+
+ARGUMENT:: repeats
+How many times should the events repeat on the disk
+
+ARGUMENT:: length
+Duration of each loop
+
+
+EXAMPLES::
+
+First, create or modify a MIDI file to play on the music box. Note that not all notes are not available. The notes you can use are: D#4, G#4, A#4, C5, D#5, F5, G#5, A#5, C6, C#6, D#6, F6, G6, G#6, A#6
+
+This class will check your file to see if it uses the allowed notes and if not, will find a transposition if one exists.
+
+
+code::
+(
+// Test that your MIDI file can be transposed and listen to the result
+f = FisherPriceRecords.openMIDI("~/Berlo1.mid".standardizePath, "Bolero");
+f.p.play;
+//Note that the durations in the pattern are from the MIDI file.
+//When you create the disk, the notes will be scaled to cover one rotation
+// of the disk.
+//The rotational speed of the disk depends on how tightly the spring is wound.
+
+)
+(
+f.realise(2); // This is a short loop, so repeat it
+f.write("~/bolero2.scad".standardizePath);
+)
+::
+
+Be sure fpRecordModule.scad is copied to be in the same directory as
+the scad file that you just generated.
+Open your scad file in OpenSCAD and see if it looks ok.
+Press F6 to render it. Save it as an STL file.
+Follow the manufacturer's instructions if your printer for how to
+use the STL file.
