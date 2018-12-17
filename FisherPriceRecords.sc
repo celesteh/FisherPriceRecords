@@ -2,8 +2,8 @@ FisherPriceRecords {
 
 	classvar <allNotes, <allowedNotes, playableDegrees;
 
-	var midiEvents, transposition, lowestNote, degrees, str, <>title,
-	source, lookupTable;
+	var noteEvents, transposition, lowestNote, degrees, str, <>title,
+	source, lookupTable, dur;
 
 	*initClass {
 
@@ -31,14 +31,54 @@ FisherPriceRecords {
 
 	}
 
-	* new{|midiEvents, title, source|
+	* new{|events, title, source|
 
-		^super.new.init(midiEvents, title, source);
+		^super.new.init(events, title, source);
 	}
 
-	init {|midiArr, name, src|
+	* openMIDI{|file, title|
+		^super.new.initFile(file, title);
+	}
 
-		midiEvents = midiArr;
+	initFile{|file, name|
+
+		var midi, events, start, type, note, velocity;
+
+		Class.findAllReferences(\SimpleMIDIFile).notNil.if({
+			midi = SimpleMIDIFile.read(file);
+			midi.timeMode = \seconds;
+			events = midi.midiEvents.select({|evt|
+				start = evt[1];
+				type = evt[2];
+				note = evt[4];
+				velocity = evt[5];
+
+				(type == \noteOn) && ( velocity != 0)
+			});
+
+			events = events.collect({|evt|
+				start = evt[1];
+				type = evt[2];
+				note = evt[4];
+				velocity = evt[5];
+
+				[start, note]
+			});
+
+			dur = midi.length;
+
+		}, {
+
+			"You must install the wslib Quark to load a MIDI file".warn;
+		});
+
+		this.init(events, name, file.toString);
+
+	}
+
+	init {|noteArr, name, src|
+
+		noteEvents = noteArr;
 		title = name;
 		source = src;
 		str="";
@@ -47,16 +87,16 @@ FisherPriceRecords {
 
 	}
 
+
 	pr_de_dup{
 
 		var notes, events, note, start, velocity, chord, unique;
 
 		notes = Dictionary();
 
-		events = midiEvents.select({|evt|
-			start = evt[1];
-			note = evt[4];
-			velocity = evt[5];
+		events = noteEvents.select({|evt|
+			start = evt[0];
+			note = evt[1];
 
 			unique = true;
 			chord = notes[start.asFloat];
@@ -69,29 +109,35 @@ FisherPriceRecords {
 			notes[start.asFloat] = chord;
 
 
-			(evt[2] == \noteOn) && (velocity != 0) && unique
+			unique
 
 
 		}); // is a unique note with velocity
 
-		midiEvents = events.sort({|a, b|
-			a[1] < b[1]
+		noteEvents = events.sort({|a, b|
+			a[0] < b[0]
 		});
 
 
 	}
 
+	realize{|repeats=1, length|
+		this.realise(repeats, length);
+	}
+
 	realise{|repeats=1, length|
 
-		var noteEvents, note, time, noteStr;
+		var note, time, noteStr;
 
-		length.isNil.if({ repeats = 1; length = 0;});
-
+		length.isNil.if({
+			length = dur;
+			length.isNil.if({repeats = 1; length = 0;});
+		});
 
 		repeats.do({|i|
-			midiEvents.do({|n|
-				note = allNotes[this.map(n[4])].next;
-				time = n[1] + (i * length);
+			noteEvents.do({|n|
+				note = allNotes[this.map(n[1])].next;
+				time = n[0] + (i * length);
 
 				noteStr = "[[\"%\"], %],\n".format(note, time);
 				str = str ++ noteStr;
@@ -126,13 +172,13 @@ FisherPriceRecords {
 		notes = Dictionary.new;
 		onsets = [];
 
-		midiEvents.do({|evt|
-			startTime = evt[1].asFloat;
+		noteEvents.do({|evt|
+			startTime = evt[0].asFloat;
 			item = notes.at(startTime);
 			item.isNil.if({
 				item = [];
 			});
-			notes[startTime] = item ++ this.map(evt[4]);
+			notes[startTime] = item ++ this.map(evt[1]);
 
 			onsets.indexOf(startTime).isNil.if({
 				onsets = onsets ++ startTime;
@@ -142,7 +188,11 @@ FisherPriceRecords {
 		onsets.sort;
 		//onsets = onsets ++ length;
 		(length == 0).if({
-			length = onsets.last + 0.5;
+			dur.notNil.if({
+				length = dur;
+			}, {
+				length = onsets.last + 0.5;
+			});
 		});
 
 
@@ -202,13 +252,13 @@ FisherPriceRecords {
 		errors = [];
 		transposition = 0;
 
-		midiEvents.do({|evt|
-			(evt[2] == \noteOn).if ({
-				note = evt[4];
+		noteEvents.do({|evt|
+			//(evt[2] == \noteOn).if ({
+				note = evt[1];
 				notes.includes(note).not.if({
 					notes = notes ++ note;
 				})
-			})
+			//})
 		});
 		notes = notes.sort;
 
@@ -271,7 +321,7 @@ FisherPriceRecords {
 						(item[1] < min).if({
 							min = item[1];
 							best = [index];
-							"min is %".format(min).postln;
+							//"min is %".format(min).postln;
 						}, { (item[1] == min).if({
 							best = best ++ index;
 						})
@@ -351,9 +401,13 @@ composition = [
 
 		include = PathName(FisherPriceRecords.filenameSymbol.asString).pathOnly;
 		include = include.asString ++ "fpRecordModule.scad";
-		include.postln;
-		path.pathOnly.asString.postln;
-		File.copy(include, path.pathOnly.asString);
+		//include.postln;
+		//path.pathOnly.asString.postln;
+		{
+			File.copy(include, path.pathOnly.asString);
+		}.try({
+			"Please ensure that there is a copy of fpRecordModule.scad in %.".format(path.pathOnly.asString).postln;
+		});
 	}
 
 	asString{
