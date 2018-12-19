@@ -4,12 +4,17 @@ categories:: External Control>MIDI
 related:: Classes/SimpleMIDIFile
 
 DESCRIPTION::
-Convert a MIDI file to a record compatible with vintage (1970's) Fisher Price music box record players
+Convert a MIDI file to a record compatible with vintage (1970's) Fisher Price music box record players.
+
 If the MIDI file is not in a key supported by the record player, this will search for a working transposition.
+
 Forked from Tycho's code at https://www.youmagine.com/designs/fisher-price-record
+
 Requires:
-    OpenSCAD http://www.openscad.org/
-	wslib Quark
+
+ *   OpenSCAD http://www.openscad.org/
+
+ *	wslib Quark
 
 
 CLASSMETHODS::
@@ -33,8 +38,11 @@ ARGUMENT:: title
 The name of the piece
 
 ARGUMENT:: source
-If this si from another file, the path to that file
+If this is from another file, the path to that file
 
+
+METHOD:: allowedNotes
+returns:: MIDI Note numbers of the notes supported by the Fisher Price Music Box
 
 INSTANCEMETHODS::
 
@@ -50,8 +58,9 @@ The duration of each loop
 returns:: A Pdef containing note values and start times
 
 METHOD:: crushRange
-Not yet implemented
-		If the input events ahve too wide a range or a transposition can't be found, it might be helpful to reduce the number of octaves in the piece.
+Not yet implemented.
+
+		If the input events have too wide a range or a transposition can't be found, it might be helpful to reduce the number of octaves in the piece.
 ARGUMENT:: octaves
 -1 = raise lowest octave
 -2 raise lowest two octaves
@@ -104,7 +113,13 @@ f.write("~/bolero2.scad".standardizePath);
 
 Be sure fpRecordModule.scad is copied to be in the same directory as
 the scad file that you just generated.
-Open your scad file in OpenSCAD and see if it looks ok.
-Press F6 to render it. Save it as an STL file.
+
+Open your scad file in OpenSCAD and see if it looks ok.  The file is
+human readable and you can make changes in it and fpRecordModule directly.
+You may wish to adjust the pin size and the groove width based on your
+printer specifications.
+
+Press F6 to render it. Save it as an STL file. Rendering may take up to half an hour, so be patient.
+
 Follow the manufacturer's instructions if your printer for how to
 use the STL file.

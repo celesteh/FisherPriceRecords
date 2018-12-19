@@ -7,17 +7,11 @@ Forked from [Tycho](https://www.youmagine.com/tycho/designs)'s code at https://w
 
 * [OpenSCAD](http://www.openscad.org/)
 
-### For SuperCollider script
+### For SuperCollider
 
 * wslib Quark
 
-### For Python script
-* [Music21](http://web.mit.edu/music21/)
-* timidity
 
-## SuperCollider Installation
-
-Put the fpclasses into your Extensions directory
 
 ## How to use
 
@@ -30,31 +24,33 @@ notes and if not, will find a transposition if one exists.
 
 First, check the transposition of your file:
 ```
-(
-var events;
-m = SimpleMIDIFile.read("~/foo.mid");
-m.timeMode = \seconds;
-events = m.midiEvents;
-f = FisherPriceRecords(events, "My Title");
-)
+f = FisherPriceRecords("~/foo.mid".standardizePath, "My Title");
 ```
 
 If no transposition can be found, it will generate a warning and some lists
 of outside notes in the transpositions that were the closest fit.
 
 Evaluate the result to see if it sounds ok:
-`f.p.play(\foo, m.length)`
+`f.p.play(\foo)`
 
 Write the scad file:
 ```
-f.realise(1, m.length);
-f.write("~/foo.scad");
+f.realise(1);
+f.write("~/foo.scad".standardizePath);
 ```
 
-The first argument to `realise` is the number of times the midi file should
+The argument to `realise` is the number of times the midi file should
 repeat on the disk. For very short files, you may want to increase the number.
 
+Be sure fpRecordModule.scad is copied to be in the same directory as
+the scad file that you just generated.
 
-Make sure a copy of fpRecordModule.scad is in the same directory as your new
-file. Open it with OpenScad.  Press F6 to render the file. This may take some
-time. Then save it as an STL.
+Open your scad file in OpenSCAD and see if it looks ok.  The file is
+human readable and you can make changes in it and fpRecordModule directly.
+You may wish to adjust the pin size and the groove width based on your
+printer specifications.
+
+Press F6 to render it. Save it as an STL file. Rendering may take up to half an hour, so be patient.
+
+Follow the manufacturer's instructions if your printer for how to
+use the STL file.

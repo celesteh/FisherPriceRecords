@@ -8,7 +8,7 @@ oDrive = 21.8; // offset of the small holes from the center
 rDrive = 2; // radius of the four small holes (was 1.65)
 
 hGroove = 2; // Height of the groove (is added to hStock)
-pinwidth = 1.6; //  Could be something between 1.3 and 1.6 depending on how much the pins get rounded by the printer.
+pinwidth = 1.3;//1.6; //  Could be something between 1.3 and 1.6 depending on how much the pins get rounded by the printer.
 
 trackwidth=2; // [1,2] // how many pins should live in one track? 1 or 2?
 baseheight = hStock;
@@ -26,16 +26,16 @@ notelist = [
 
 // a composition is written as:
 // [  [["note", "note"], count ],[["note"], count ]
-// Count is the rotationstep. The heighest count is taken to calculate the length of the piece. 
+// Count is the rotationstep. The heighest count is taken to calculate the length of the piece.
 // If you have a very short piece you can put as the last rotationstep a higher number to speedup the tempo: [[], 20]
 // Some notes come double in the musicbox. This allows to play the same note quickly after another.
 // A series of short notes can be written as: [ ["A-5"], 2.0 ],[["A-5_2"], 2.25],[["A-5"], 2.5]
-// Notes that not exist in the above list will not be rendered and you get a warning in the console. 
+// Notes that not exist in the above list will not be rendered and you get a warning in the console.
 
 // An example of a composition. This variable is not used when createMusic is called from another file and a variable 'composition' is given there.
-composition = [ 
+composition = [
     // All pins
-    
+
     [["D#4"], 18],
     [["G#4"], 19],
     [["A#4"], 20],
@@ -76,7 +76,10 @@ composition = [
     [["G#6"],13],
     [["A#6"],14],
     [[], 42 ]]; // A little rest
-              
+
+totalLength = 0; // the length of the piece
+// set to zero if you want to calculate it
+// from the values in the composition list
 
 module createBlank() {
 	difference() {
@@ -86,7 +89,7 @@ module createBlank() {
 		circle(r=3.75, center=true);
 		// Drive holes
 		for(i=[0:90:360]){rotate(i)translate([0,oDrive,0]) { circle(r=rDrive, center=true); }
-    
+
         }
     }
 }
@@ -109,27 +112,30 @@ module pin(angle, row){
 }
 
 module createMusic(){
-    
-    musicsteps = max([for(i = composition) i[1]]);
+
+    compositionsteps = max([for(i = composition) i[1]]);
+    //echo(compositionsteps);
+    musicsteps = max(compositionsteps, totalLength);
+    //echo(musicsteps);
     rotationfactor = 360/musicsteps;
-    
-    
+
+
         // Create 22 tracks, double second number for 11 tracks
         // 1.39 or 2.78
         for (a =[27.5:1.39*trackwidth:59]) track(a, ringwidth);
-       
-            
+
+
         // Layout the pins
         for(chord = composition, i = search(chord[0], notelist)){
-            echo(str("Notenumber: ", notelist[i][1], 
-                    " Notename: ", notelist[i][0], 
-                    " Position: ", chord[1] ));
+    //        echo(str("Notenumber: ", notelist[i][1],
+     //               " Notename: ", notelist[i][0],
+     //               " Position: ", chord[1] ));
             if (notelist[i])    // If there is a tuple with notenumber and pinnumber
                 pin(chord[1]*rotationfactor, notelist[i][1]);
             else                // The note is not in de notelist, so not playable
                 echo(str("<b>Warning!</b> Unknown note in: ", chord ));
        }
-    
+
 };
 
 module writeText(title,y=5,size=8, font=":style=Italic"){
@@ -151,16 +157,16 @@ union(){
         linear_extrude(height=hStock){
             createBlank();
         }
-        
+
         linear_extrude(height=hStock+hGroove){
             createMusic();
-       
+
         }
         linear_extrude(height=hStock+hGroove+0.4){ // Lift the side 0.4 mm
           track(27.6-ringwidth,0.9);
           track(59.8,1.4);
         }
-                
+
 }
 
 //

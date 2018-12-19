@@ -3,7 +3,7 @@ FisherPriceRecords {
 	classvar <allNotes, <allowedNotes, playableDegrees;
 
 	var noteEvents, transposition, lowestNote, degrees, str, <>title,
-	source, lookupTable, dur;
+	source, lookupTable, dur, realisedLength;
 
 	*initClass {
 
@@ -81,7 +81,7 @@ FisherPriceRecords {
 		noteEvents = noteArr;
 		title = name;
 		source = src;
-		str="";
+		//str="";
 		this.pr_de_dup();
 		this.findTransposition;
 
@@ -121,6 +121,14 @@ FisherPriceRecords {
 
 	}
 
+	length_{|length|
+		dur = length;
+	}
+
+	length{
+		^dur
+	}
+
 	realize{|repeats=1, length|
 		this.realise(repeats, length);
 	}
@@ -131,8 +139,17 @@ FisherPriceRecords {
 
 		length.isNil.if({
 			length = dur;
-			length.isNil.if({repeats = 1; length = 0;});
+			//length.isNil.if({repeats = 1; length = 0;});
 		});
+
+		length.notNil.if({
+			(length < noteEvents.last[0]).if({
+				"length set shorter than the duration of the piece".warn;
+				length = noteEvents.last[0] + 0.5;
+			}, {
+				realisedLength = repeats * length;
+			})
+		}, { length = noteEvents.last[0] + 0.5; });
 
 		repeats.do({|i|
 			noteEvents.do({|n|
@@ -354,7 +371,7 @@ FisherPriceRecords {
 
 	write{|filename|
 
-		var path, file, include;
+		var path, file, include, size;
 
 		filename = filename.standardizePath;
 
@@ -390,7 +407,16 @@ composition = [
 """ );
 		file.write(this.asString);
 		file.write("];\n\n\n");
-		file.write("writeText(\"%\", y=8, size=4);\n".format(title));
+
+		//realisedLength
+		realisedLength.notNil.if({(realisedLength > 0).if({
+			file.write("totalLength = %;\n\n".format(realisedLength));
+		})});
+		size = 4;
+		(title.size <= 10).if({
+			size = 5;
+		});
+		file.write("writeText(\"%\", y=8, size=%);\n".format(title, size));
 
 		file.write("""
 
