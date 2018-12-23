@@ -1,12 +1,17 @@
 TITLE:: FisherPriceRecords
 summary:: Convert a MIDI file to a record compatible with vintage (1970's) Fisher Price music box record players
 categories:: External Control>MIDI
-related:: Classes/SimpleMIDIFile
+related:: Classes/SimpleMIDIFile, Classes/Pattern
 
 DESCRIPTION::
-Convert a MIDI file to a record compatible with vintage (1970's) Fisher Price music box record players.
+Convert a MIDI file, pattern or a list of note events to a record compatible with vintage (1970's) Fisher Price music box record players.
+These are music boxes that have changeable disks rather than drums.
+Each rotation of the disk plays every note on the disk.
+The speed of rotation depends on how tightly the spring is wound.
+Durations of a single rotation are approximately 34-40 seconds, although they may have a wider range.
+The onset timings of events you provide will be scaled to fit within a single rotation.
 
-If the MIDI file is not in a key supported by the record player, this will search for a working transposition.
+If the notes you provide are not in a key supported by the record player, the class will search for a working transposition.
 
 Forked from Tycho's code at https://www.youmagine.com/designs/fisher-price-record
 
@@ -28,12 +33,25 @@ Full path to the Midi File
 ARGUMENT:: title
 The name of the piece
 
+METHOD:: fromPattern
+Create a record from a programmed pattern.
+
+ARGUMENT:: pattern
+Any event link::Classes/Pattern
+
+ARGUMENT:: title
+The name of the piece
+
+Argument:: length
+An optional argument of the duration, in seconds, of the pattern to use on the disk. If your pattern will end by itself, set this to 0 or leave as nil.
+
 
 METHOD:: new
 Create a record from a list of onset times and midi note values
 
 ARGUMENT:: events
 An array of note onset events [[time, note], [time, note]...]
+
 ARGUMENT:: title
 The name of the piece
 
@@ -46,6 +64,15 @@ returns:: MIDI Note numbers of the notes supported by the Fisher Price Music Box
 
 INSTANCEMETHODS::
 
+METHOD:: success
+returns:: A boolean indicating whether or not a transpoition was found
+
+METHOD:: length
+Set the duration of the enitre series of events. This is specifically useful for deciding how much space
+to leave after the last note.
+
+
+
 METHOD:: p
 Create a pattern to audition the transposed piece
 
@@ -53,20 +80,9 @@ ARGUMENT:: def
 A symbol used for a Pdef
 
 ARGUMENT:: length
-The duration of each loop
+An optional argument of the duration of each loop, in seconds
 
 returns:: A Pdef containing note values and start times
-
-METHOD:: crushRange
-Not yet implemented.
-
-		If the input events have too wide a range or a transposition can't be found, it might be helpful to reduce the number of octaves in the piece.
-ARGUMENT:: octaves
--1 = raise lowest octave
--2 raise lowest two octaves
-1 lower highest octave
-2 lower highest two octaves
-f.crushRange(2) gives the same result as f.crushRange(1).crushRange(1)
 
 
 METHOD:: write
@@ -74,7 +90,7 @@ Write an OPenSCAD file of the FisherPrice Disk
 ARGUMENT:: filename
 Patn of where to write.
 
-		Your file will not render unless there is a copy of fpRecordModule.scad in it's directory.
+Your file will not render unless there is a copy of fpRecordModule.scad in it's directory.
 
 
 METHOD:: realise
@@ -84,7 +100,20 @@ ARGUMENT:: repeats
 How many times should the events repeat on the disk
 
 ARGUMENT:: length
-Duration of each loop
+An optional argument of the duration in seconds of each loop in the source material.
+
+
+METHOD:: crushRange
+Not yet implemented.
+
+If the input events have too wide a range or a transposition can't be found, it might be helpful to reduce the number of octaves in the piece.
+ARGUMENT:: octaves
+-1 = raise lowest octave
+-2 raise lowest two octaves
+1 lower highest octave
+2 lower highest two octaves
+f.crushRange(2) gives the same result as f.crushRange(1).crushRange(1)
+
 
 
 EXAMPLES::
@@ -98,7 +127,9 @@ code::
 (
 // Test that your MIDI file can be transposed and listen to the result
 f = FisherPriceRecords.openMIDI("~/Berlo1.mid".standardizePath, "Bolero");
-f.p.play;
+f.success.if({
+	f.p.play;
+})
 //Note that the durations in the pattern are from the MIDI file.
 //When you create the disk, the notes will be scaled to cover one rotation
 // of the disk.

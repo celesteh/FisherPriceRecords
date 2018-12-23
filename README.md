@@ -19,12 +19,16 @@ First, create or modify a MIDI file to play on the music box. Note that not all
 notes are not available. The notes you can use are:
 D#4, G#4, A#4, C5, D#5, F5, G#5, A#5, C6, C#6, D#6, F6, G6, G#6, A#6
 
+The RPM of the disk varies depending on how tightly the spring is wound. A range
+of 34-40 seconds per revolution is normal. The SuperCollider script will scale
+your durations to fit in a single disk revolution.
+
 The SuperCollider script will check your file to see if it uses the allowed
 notes and if not, will find a transposition if one exists.
 
 First, check the transposition of your file:
 ```
-f = FisherPriceRecords("~/foo.mid".standardizePath, "My Title");
+f = FisherPriceRecords.openMIDI("~/foo.mid".standardizePath, "My Title");
 ```
 
 If no transposition can be found, it will generate a warning and some lists
@@ -41,6 +45,7 @@ f.write("~/foo.scad".standardizePath);
 
 The argument to `realise` is the number of times the midi file should
 repeat on the disk. For very short files, you may want to increase the number.
+This will scale the durations to so that every note fits in for every repetition.
 
 Be sure fpRecordModule.scad is copied to be in the same directory as
 the scad file that you just generated.

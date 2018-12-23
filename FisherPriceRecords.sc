@@ -3,7 +3,7 @@ FisherPriceRecords {
 	classvar <allNotes, <allowedNotes, playableDegrees;
 
 	var noteEvents, transposition, lowestNote, degrees, str, <>title,
-	source, lookupTable, dur, realisedLength;
+	source, lookupTable, dur, realisedLength, <success;
 
 	*initClass {
 
@@ -38,6 +38,114 @@ FisherPriceRecords {
 
 	* openMIDI{|file, title|
 		^super.new.initFile(file, title);
+	}
+
+	* fromPattern{|pattern, title, length|
+		^super.new.initPattern(pattern, title, length);
+	}
+
+	initPattern{|pattern, name, length|
+
+		var events, event, defaultEvent, time, stream, eLIMIT, tLIMIT,
+		warned, note;
+
+		// This method borrows heavily from wslib
+
+		eLIMIT = 360;
+		tLIMIT = 60;
+		warned = false;
+
+		time = 0;
+		events=[];
+		stream = pattern.asStream;
+		/*
+		(length.isNil || (length==0)).if({
+		"Infinite patterns will be truncated after % events".format(eLIMIT).warn;
+		warned = true;
+		}, { */
+		(length > tLIMIT).if({
+			"Your specified duration % is significantly longer than a single record revolution but will be scaled to fit in one.\nIt will be truncated after % events".warn(length, eLIMIT);
+			warned = true;
+		}, {
+			(length.notNil && (length>0)).if({ tLIMIT = length; });
+		});
+		//});
+		warned.if({
+			"""Events that are too close together will fail to render correctly in
+openScad or may not play back reliably.""".postln;
+		});
+
+		defaultEvent = Event.default;
+		//defaultEvent.postln;
+
+		defaultEvent.use({
+			defaultEvent[ \midinote2 ] = {
+				//"freq is %".format(defaultEvent[\freq]).postln;
+				//"midinote is %".format(defaultEvent[\midinote]).postln;
+				( ~freq.isFunction.not).if(
+
+					{ ~freq.cpsmidi },
+					{ ~midinote.value }
+				);
+			};
+		});
+
+
+		{(event = stream.next( defaultEvent )).notNil &&
+			(events.size < eLIMIT) && (time < tLIMIT)}.while({
+			//"loop".postln;
+			event.use({
+				event.isRest.not.if({
+
+					[time, event[\midinote2].value]
+					.multiChannelExpand.do({|arr|
+						//"adding".postln;
+						events = events.add(arr);
+					});
+
+					//event.postln;
+				});
+				//event.delta.postln;
+				//time.postln;
+				time = time+event.delta;
+			});
+		});
+
+		(length.isNil || (length==0)).if({
+			dur = time;
+		}, {
+			(time > tLIMIT).if({
+				"% seconds truncated from the last event in your pattern to fit within the time limit.".format(time-tLIMIT).warn;
+			});
+			dur = length;
+		});
+
+		this.init(events, name);
+
+		/*
+		while { (event = stream.next( defaultEvent )).notNil &&
+		{ (count = count use+ 1) <= maxEvents } }
+		{ event.use({
+		if( event.isRest.not ) // not a \rest
+		{ 	[
+		event.midinote2,
+		event.velocity,
+		time,
+		event.sustain,
+		event.upVelo, // addNote copies noteNumber if nil
+		event.channel ? 0,
+		event.track ?? {format.min(1)}, // format 0: all in track 0
+		false // don't sort (yet)
+		].multiChannelExpand // allow multi-note events
+		.do({ |array| this.addNote( *array ); });
+
+		};
+		time = time + event.delta;
+
+		});
+		};
+		*/
+
 	}
 
 	initFile{|file, name|
@@ -90,9 +198,12 @@ FisherPriceRecords {
 
 	pr_de_dup{
 
-		var notes, events, note, start, velocity, chord, unique;
+		var notes, events, note, start, velocity, chord, unique, min, max;
 
 		notes = Dictionary();
+
+		max = 0;
+		min = inf;
 
 		events = noteEvents.select({|evt|
 			start = evt[0];
@@ -108,6 +219,8 @@ FisherPriceRecords {
 			chord = chord ++ note;
 			notes[start.asFloat] = chord;
 
+			min = min.min(note);
+			max = max.max(note);
 
 			unique
 
@@ -118,11 +231,13 @@ FisherPriceRecords {
 			a[0] < b[0]
 		});
 
+		//"max: % \tmin: %".format(max, min).postln;
 
 	}
 
 	length_{|length|
 		dur = length;
+		str = nil;
 	}
 
 	length{
@@ -136,6 +251,10 @@ FisherPriceRecords {
 	realise{|repeats=1, length|
 
 		var note, time, noteStr;
+
+		success.not.if({
+			"Some notes are not playable and will not be printed".warn;
+		});
 
 		length.isNil.if({
 			length = dur;
@@ -268,18 +387,22 @@ FisherPriceRecords {
 		notes = [];
 		errors = [];
 		transposition = 0;
+		found = false;
 
 		noteEvents.do({|evt|
 			//(evt[2] == \noteOn).if ({
-				note = evt[1];
-				notes.includes(note).not.if({
-					notes = notes ++ note;
-				})
+			note = evt[1];
+			notes.includes(note).not.if({
+				notes = notes ++ note;
+			})
 			//})
 		});
 		notes = notes.sort;
 
 		range = notes.last - notes.first;
+
+		//range.postln;
+		//(allowedNotes.first - allowedNotes.last).abs.postln;
 
 		(range.abs > (allowedNotes.first - allowedNotes.last).abs).if({
 			"range too wide".warn;
@@ -305,7 +428,7 @@ FisherPriceRecords {
 				});
 
 				(err.size == 0).if({
-					"success %".format(tnsp).postln;
+					//"success %".format(tnsp).postln;
 				}, {
 					//"transposition % failed".format(tnsp).postln;
 				});
@@ -333,7 +456,7 @@ FisherPriceRecords {
 						transposition = item.first;
 						// count allowedNotes from end
 						//allowedNotes.reverse[index] - notes.last;
-						"success %".format(transposition).postln;
+						//"success %".format(transposition).postln;
 					}, {
 						(item[1] < min).if({
 							min = item[1];
@@ -363,8 +486,9 @@ FisherPriceRecords {
 
 
 			});
-		})
+		});
 
+		success = found;
 		^transposition
 
 	}
@@ -372,6 +496,10 @@ FisherPriceRecords {
 	write{|filename|
 
 		var path, file, include, size;
+
+		str.isNil.if({
+			this.realise;
+		});
 
 		filename = filename.standardizePath;
 
@@ -425,7 +553,7 @@ composition = [
 
 		file.close;
 
-		include = PathName(FisherPriceRecords.filenameSymbol.asString).pathOnly;
+		include = PathName(this.class.filenameSymbol.asString).pathOnly;
 		include = include.asString ++ "fpRecordModule.scad";
 		//include.postln;
 		//path.pathOnly.asString.postln;
@@ -438,10 +566,19 @@ composition = [
 
 	asString{
 
-		str.isNil.if({
-			this.realise
+		var ret;
+
+		ret = str;
+
+		ret.isNil.if({
+			success.if({
+				this.realise;
+				ret = str;
+			}, {
+				ret = "a %".format(this.class.asString);
+			});
 		});
 
-		^str
+		^ret
 	}
 }
