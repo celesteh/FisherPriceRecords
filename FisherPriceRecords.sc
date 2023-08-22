@@ -3,7 +3,7 @@ FisherPriceRecords {
 	classvar <allNotes, <allowedNotes, playableDegrees;
 
 	var noteEvents, transposition, lowestNote, degrees, str, <>title,
-	source, lookupTable, dur, realisedLength, <success;
+	source, lookupTable, <dur, realisedLength, <success;
 
 	*initClass {
 
@@ -31,9 +31,9 @@ FisherPriceRecords {
 
 	}
 
-	* new{|events, title, source|
+	* new{|events, title, source, length|
 
-		^super.new.init(events, title, source);
+		^super.new.init(events, title, source, length);
 	}
 
 	* openMIDI{|file, title|
@@ -184,11 +184,14 @@ openScad or may not play back reliably.""".postln;
 
 	}
 
-	init {|noteArr, name, src|
+	init {|noteArr, name, src, length|
 
 		noteEvents = noteArr;
 		title = name;
 		source = src;
+		length.notNil.if({
+			dur = length;
+		});
 		//str="";
 		this.pr_de_dup();
 		this.findTransposition;
@@ -385,7 +388,6 @@ openScad or may not play back reliably.""".postln;
 		var notes, note, range, tryTransposition, errors, trans, found, min, best, outside;
 
 		notes = [];
-		errors = [];
 		transposition = 0;
 		found = false;
 
@@ -436,37 +438,48 @@ openScad or may not play back reliably.""".postln;
 				[tnsp, err_count, err];
 			};
 
-			allowedNotes.reverse.do({|allowed|
+			// Do we actually need to transpose?
+			errors = tryTransposition.value(0);
+			(errors[1] == 0).if({
+				found = true;
+				transposition = 0;
+			}, {
+				//search for a working transposition
 
-				trans = allowed - notes.last;
-				errors = errors.add(tryTransposition.value(trans));
-				//trans.postln;
-				//errors.postln;
-			});
+				errors = [];
 
-			found = false;
-			min = inf;
+				allowedNotes.reverse.do({|allowed|
 
-			errors.do({|item, index|
+					trans = allowed - notes.last;
+					errors = errors.add(tryTransposition.value(trans));
+					//trans.postln;
+					//errors.postln;
+				});
+
+				found = false;
+				min = inf;
+
+				errors.do({|item, index|
 
 
-				found.not.if({
-					(item[1] == 0).if({
-						found = true;
-						transposition = item.first;
-						// count allowedNotes from end
-						//allowedNotes.reverse[index] - notes.last;
-						//"success %".format(transposition).postln;
-					}, {
-						(item[1] < min).if({
-							min = item[1];
-							best = [index];
-							//"min is %".format(min).postln;
-						}, { (item[1] == min).if({
-							best = best ++ index;
+					found.not.if({
+						(item[1] == 0).if({
+							found = true;
+							transposition = item.first;
+							// count allowedNotes from end
+							//allowedNotes.reverse[index] - notes.last;
+							//"success %".format(transposition).postln;
+						}, {
+							(item[1] < min).if({
+								min = item[1];
+								best = [index];
+								//"min is %".format(min).postln;
+							}, { (item[1] == min).if({
+								best = best ++ index;
+							})
+							})
 						})
-						})
-					})
+					});
 				});
 			});
 

@@ -11,6 +11,8 @@ The speed of rotation depends on how tightly the spring is wound.
 Durations of a single rotation are approximately 34-40 seconds, although they may have a wider range.
 The onset timings of events you provide will be scaled to fit within a single rotation.
 
+The record player does not have full chromatic support.
+The notes you can use are: D#4, G#4, A#4, C5, D#5, F5, G#5, A#5, C6, C#6, D#6, F6, G6, G#6, A#6
 If the notes you provide are not in a key supported by the record player, the class will search for a working transposition.
 
 Forked from Tycho's code at https://www.youmagine.com/designs/fisher-price-record
@@ -57,6 +59,10 @@ The name of the piece
 
 ARGUMENT:: source
 If this is from another file, the path to that file
+
+ARGUMENT:: length
+An optional argument of the duration in seconds of the source material.
+
 
 
 METHOD:: allowedNotes

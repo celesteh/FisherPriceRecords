@@ -1,0 +1,9 @@
+(
+  name: "FisherPriceRecords",
+  summary: "Turn a MIDI fileinto a 3d printed Fisher Price disk",
+  version: "1.0.2",
+  schelp: "FisherPriceRecords",
+  dependencies: ["wslib"],
+  license: "GPL",
+  copyright: "Charles Hutchins. 2018-2023"
+)
