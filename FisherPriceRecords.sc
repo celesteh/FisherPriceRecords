@@ -15,7 +15,7 @@ FisherPriceRecords {
 			(notenames.wrapAt(i) ++ (i.div(12) + 2)).asSymbol;
 		});
 
-		allowedNotes = ["D#4", "G#4", "A#4", "C5", "D#5", "F5", "G#5", "A#5", "C6", "C#6", "D#6", "F6", "G6", "G#6", "A#6"].collect({|note|
+		allowedNotes = ["D#4", "G#4", "A#4", "C5", "D#5", "F5", "G5", "G#5", "A#5", "C6", "C#6", "D#6", "F6", "G6", "G#6", "A#6"].collect({|note|
 			allNotes.indexOf(note.asSymbol);
 		});
 
